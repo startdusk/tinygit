@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/startdusk/tinygit"
 )
@@ -14,15 +15,51 @@ func main() {
 		printHelp()
 		return
 	}
-
+	fmt.Println(os.Args)
 	cmd := os.Args[1]
 	switch cmd {
 	case "version":
-		fmt.Fprintln(os.Stdout, version)
+		fmt.Println(version)
 	case "init":
+		var repo string
+		if len(os.Args) > 2 {
+			repo = os.Args[2]
+		}
+		if repo == "" {
+			repo = "."
+		}
+		if err := initail(repo); err != nil {
+			fmt.Println("can't init this repository")
+			os.Exit(0)
+		}
+		dir, _ := os.Getwd()
+		_, repo = filepath.Split(dir)
+		fmt.Printf("initialized empty repository: %s", repo)
+	case "help", "h":
+		printHelp()
 	default:
-		fmt.Fprintf(os.Stdout, "Unsupported `%s` command\n", cmd)
+		fmt.Printf("Unsupported `%s` command\n", cmd)
 	}
+}
+
+// Create directory for repo and initialize .git directory.
+func initail(repo string) error {
+	if err := os.MkdirAll(repo, os.ModePerm); err != nil {
+		return err
+	}
+	tinygitPath := filepath.Join(repo, ".tinygit")
+	if err := os.MkdirAll(tinygitPath, os.ModePerm); err != nil {
+		return err
+	}
+	for _, name := range [3]string{"objects", "refs", "refs/heads"} {
+		if err := os.MkdirAll(filepath.Join(tinygitPath, name), os.ModePerm); err != nil {
+			return err
+		}
+	}
+	if err := os.WriteFile(filepath.Join(tinygitPath, "HEAD"), []byte("ref: refs/heads/master"), os.ModePerm); err != nil {
+		return err
+	}
+	return nil
 }
 
 func printHelp() {
@@ -38,5 +75,5 @@ work on the current change (see also: tinygit help everyday)
    mv        Move or rename a file, a directory, or a symlink
    rm        Remove files from the working tree and from the index
 	`
-	fmt.Fprintln(os.Stdout, help)
+	fmt.Println(help)
 }
