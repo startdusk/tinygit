@@ -2,4 +2,4 @@
 
 A tiny Git
 
-rfc: [pygit](https://benhoyt.com/writings/pygit/)
+Reference: [pygit](https://benhoyt.com/writings/pygit/)

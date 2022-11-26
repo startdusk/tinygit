@@ -32,8 +32,10 @@ func main() {
 			fmt.Println("can't init this repository")
 			os.Exit(0)
 		}
-		dir, _ := os.Getwd()
-		_, repo = filepath.Split(dir)
+		if repo == "." {
+			dir, _ := os.Getwd()
+			_, repo = filepath.Split(dir)
+		}
 		fmt.Printf("initialized empty repository: %s", repo)
 	case "help", "h":
 		printHelp()
