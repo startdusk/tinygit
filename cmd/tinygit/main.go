@@ -36,7 +36,6 @@ func main() {
 			dir, _ := os.Getwd()
 			_, repo = filepath.Split(dir)
 		}
-		fmt.Printf("initialized empty repository: %s", repo)
 	case "help", "h":
 		printHelp()
 	default:
@@ -44,7 +43,7 @@ func main() {
 	}
 }
 
-// Create directory for repo and initialize .git directory.
+// Create directory for repo and initialize .tinygit directory.
 func initail(repo string) error {
 	if err := os.MkdirAll(repo, os.ModePerm); err != nil {
 		return err
