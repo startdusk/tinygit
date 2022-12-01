@@ -33,31 +33,30 @@ type HashParam struct {
 
 // HashObject compute hash of object data of given type and write to object store if
 // "WriteFile" is True. Return SHA-1 object hash as hex string.
-func HashObject(param HashParam) (string, error) {
-	header := []byte(fmt.Sprintf("%s %d", param.ObjType, len(param.Data)))
-	var fullData []byte
-	fullData = append(fullData, header...)
-	fullData = append(fullData, '\x00')
-	fullData = append(fullData, param.Data...)
+func HashObject(param HashParam) (string, string, error) {
+	fullData := genFullData(param.ObjType, param.Data)
 	sha1 := sha1Hash(fullData)
+
+	var objPath string
 	if param.WriteFile {
 		path := genObjectPath(sha1[:2])
 		// check if file or directory exists
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			// path does not exist
 			if err := os.MkdirAll(path, os.ModePerm); err != nil {
-				return sha1, fmt.Errorf("create path: %w", err)
+				return sha1, objPath, fmt.Errorf("create path: %w", err)
 			}
 		}
-		compress, err := zlibCompress(fullData)
+		compressed, err := zlibCompress(fullData)
 		if err != nil {
-			return sha1, fmt.Errorf("zlib compress: %w", err)
+			return sha1, objPath, fmt.Errorf("zlib compress: %w", err)
 		}
-		if err := os.WriteFile(genObjectFile(path, sha1[2:]), compress, os.ModePerm); err != nil {
-			return sha1, fmt.Errorf("write file: %w", err)
+		objPath = genObjectFile(path, sha1[2:])
+		if err := os.WriteFile(objPath, compressed, os.ModePerm); err != nil {
+			return sha1, objPath, fmt.Errorf("write file: %w", err)
 		}
 	}
-	return sha1, nil
+	return sha1, objPath, nil
 }
 
 // FindObject find object with given SHA-1 prefix and return path to object in object
@@ -95,6 +94,15 @@ func zlibDecompress(compressed []byte) ([]byte, error) {
 	io.Copy(&buf, r)
 
 	return buf.Bytes(), nil
+}
+
+func genFullData(typ ObjType, data []byte) []byte {
+	header := []byte(fmt.Sprintf("%s %d", typ, len(data)))
+	var fullData []byte
+	fullData = append(fullData, header...)
+	fullData = append(fullData, ' ')
+	fullData = append(fullData, data...)
+	return fullData
 }
 
 func genObjectFile(path, filename string) string {
