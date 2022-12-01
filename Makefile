@@ -21,6 +21,11 @@ confirm:
 test: clean
 	@gotest -v ./...
 
+# Fuzzing.
+.PHONY: fuzz
+fuzz: clean
+	@go test -fuzz=FuzzZlibCompress -fuzztime 30s
+
 .PHONY: clean
 	@go mod tidy
 	@go fmt ./...

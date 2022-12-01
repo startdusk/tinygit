@@ -83,7 +83,7 @@ func zlibCompress(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func zlibDeCompress(compressed []byte) ([]byte, error) {
+func zlibDecompress(compressed []byte) ([]byte, error) {
 	b := bytes.NewReader(compressed)
 	r, err := zlib.NewReader(b)
 	if err != nil {

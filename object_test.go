@@ -24,11 +24,21 @@ func TestZlibFunction(t *testing.T) {
 		t.Fatalf("zlib compress: %+v", err)
 	}
 
-	decompress, err := zlibDeCompress(compressed)
+	decompress, err := zlibDecompress(compressed)
 	if err != nil {
 		t.Fatalf("zlib decompress: %+v", err)
 	}
 	if !reflect.DeepEqual(content, decompress) {
 		t.Fatalf("content=%s, decompress=%s", content, decompress)
 	}
+}
+
+func FuzzZlibCompress(f *testing.F) {
+	f.Add([]byte{})
+	f.Fuzz(func(t *testing.T, a []byte) {
+		_, err := zlibCompress(a)
+		if err != nil {
+			t.Fatalf("zlibCompress: %+v", err)
+		}
+	})
 }
