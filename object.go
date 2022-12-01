@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"crypto/sha1"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -48,7 +49,11 @@ func HashObject(param HashParam) (string, error) {
 				return sha1, fmt.Errorf("create path: %w", err)
 			}
 		}
-		if err := os.WriteFile(genObjectFile(path, sha1[2:]), zlibCompress(fullData), os.ModePerm); err != nil {
+		compress, err := zlibCompress(fullData)
+		if err != nil {
+			return sha1, fmt.Errorf("zlib compress: %w", err)
+		}
+		if err := os.WriteFile(genObjectFile(path, sha1[2:]), compress, os.ModePerm); err != nil {
 			return sha1, fmt.Errorf("write file: %w", err)
 		}
 	}
@@ -66,12 +71,30 @@ func sha1Hash(data []byte) string {
 	return fmt.Sprintf("%x", sha1.Sum(data))
 }
 
-func zlibCompress(data []byte) []byte {
+func zlibCompress(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
 	defer w.Close()
-	w.Write(data)
-	return b.Bytes()
+	_, err := w.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	w.Flush()
+	return b.Bytes(), nil
+}
+
+func zlibDeCompress(compressed []byte) ([]byte, error) {
+	b := bytes.NewReader(compressed)
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	return buf.Bytes(), nil
 }
 
 func genObjectFile(path, filename string) string {

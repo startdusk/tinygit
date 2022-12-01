@@ -16,6 +16,15 @@ help:
 confirm:
 	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
 
+# Testing. (go install github.com/rakyll/gotest)
+.PHONY: test
+test: clean
+	@gotest -v ./...
+
+.PHONY: clean
+	@go mod tidy
+	@go fmt ./...
+	@go vet ./...
 
 # ==================================================================================== #
 # BUILD
@@ -26,3 +35,4 @@ build/tinygit:
 	@echo 'Building cmd/tinygit...'
 	go build -ldflags='-s -X main.version=${VERSION}' -o=./bin/tinygit ./cmd/tinygit
 	GOOS=linux GOARCH=amd64 go build -ldflags='-s -X main.version=${VERSION}' -o=./bin/linux_amd64/tinygit ./cmd/tinygit
+
