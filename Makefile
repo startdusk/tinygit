@@ -24,7 +24,7 @@ test: clean
 # Fuzzing.
 .PHONY: fuzz
 fuzz: clean
-	@go test -fuzz=FuzzZlibCompress -fuzztime 30s
+	@go test -fuzz=FuzzZlibFunction -fuzztime 30s
 
 .PHONY: clean
 	@go mod tidy
