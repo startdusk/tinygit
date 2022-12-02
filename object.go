@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -35,35 +38,79 @@ type HashParam struct {
 // "WriteFile" is True. Return SHA-1 object hash as hex string.
 func HashObject(param HashParam) (string, string, error) {
 	fullData := genFullData(param.ObjType, param.Data)
+	fmt.Println(fullData)
 	sha1 := sha1Hash(fullData)
 
-	var objPath string
+	var objFile string
 	if param.WriteFile {
 		path := genObjectPath(sha1[:2])
 		// check if file or directory exists
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			// path does not exist
 			if err := os.MkdirAll(path, os.ModePerm); err != nil {
-				return sha1, objPath, fmt.Errorf("create path: %w", err)
+				return sha1, objFile, fmt.Errorf("create path: %w", err)
 			}
 		}
 		compressed, err := zlibCompress(fullData)
 		if err != nil {
-			return sha1, objPath, fmt.Errorf("zlib compress: %w", err)
+			return sha1, objFile, fmt.Errorf("zlib compress: %w", err)
 		}
-		objPath = genObjectFile(path, sha1[2:])
-		if err := os.WriteFile(objPath, compressed, os.ModePerm); err != nil {
-			return sha1, objPath, fmt.Errorf("write file: %w", err)
+		objFile = genObjectFile(path, sha1[2:])
+		if err := os.WriteFile(objFile, compressed, os.ModePerm); err != nil {
+			return sha1, objFile, fmt.Errorf("write file: %w", err)
 		}
 	}
-	return sha1, objPath, nil
+	return sha1, objFile, nil
 }
 
 // FindObject find object with given SHA-1 prefix and return path to object in object
 // store, or raise ValueError if there are no objects or multiple objects
 // with this prefix.
-func FindObject(sha1Prefix string) error {
-	return nil
+func FindObject(sha1Prefix string) (string, error) {
+	if len(sha1Prefix) < 2 {
+		return "", errors.New("hash prefix must be 2 or more characters")
+	}
+
+	objPath := genObjectPath(sha1Prefix[:2])
+	objFile := genObjectFile(objPath, sha1Prefix[2:])
+	_, err := os.Stat(objFile)
+	if err != nil {
+		return "", fmt.Errorf("find object: %w", err)
+	}
+
+	return objFile, nil
+}
+
+// Read object with given SHA-1 prefix
+func ReadObject(sha1Prefix string) (ObjType, []byte, error) {
+	path, err := FindObject(sha1Prefix)
+	if err != nil {
+		return "", nil, err
+	}
+	compressed, err := os.ReadFile(path)
+	if err != nil {
+		return "", nil, fmt.Errorf("read file: %w", err)
+	}
+	fullData, err := zlibDecompress(compressed)
+	if err != nil {
+		return "", nil, err
+	}
+	nullIndex := bytes.Index(fullData, []byte("\x00"))
+	header := fullData[:nullIndex]
+	headerSplit := strings.Split(string(header), " ")
+	if len(headerSplit) != 2 {
+		return "", nil, fmt.Errorf("object header should have 2 pair but got %d", len(headerSplit))
+	}
+	objType := ObjType(headerSplit[0])
+	size, err := strconv.Atoi(headerSplit[1])
+	if err != nil {
+		return "", nil, fmt.Errorf("size should be a number, but got %s: %w", headerSplit[1], err)
+	}
+	data := fullData[nullIndex:]
+	if len(data) != size {
+		return "", nil, fmt.Errorf("expected size %d, got %d bytes", size, len(data))
+	}
+	return objType, data, nil
 }
 
 func sha1Hash(data []byte) string {
@@ -100,7 +147,7 @@ func genFullData(typ ObjType, data []byte) []byte {
 	header := []byte(fmt.Sprintf("%s %d", typ, len(data)))
 	var fullData []byte
 	fullData = append(fullData, header...)
-	fullData = append(fullData, ' ')
+	fullData = append(fullData, '\x00')
 	fullData = append(fullData, data...)
 	return fullData
 }

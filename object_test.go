@@ -55,9 +55,9 @@ func TestHashObject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot decompress file: %+v", err)
 	}
-	expectDecompressed := "blob 11 Hello World"
-	if expectDecompressed != string(decompressed) {
-		t.Fatalf("expected decompressed %s, but got %s", expectDecompressed, decompressed)
+	expectDecompressed := []byte{98, 108, 111, 98, 32, 49, 49, 0, 72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100}
+	if !reflect.DeepEqual(expectDecompressed, decompressed) {
+		t.Fatalf("expected decompressed %v, but got %v", expectDecompressed, decompressed)
 	}
 }
 
