@@ -38,7 +38,6 @@ type HashParam struct {
 // "WriteFile" is True. Return SHA-1 object hash as hex string.
 func HashObject(param HashParam) (string, string, error) {
 	fullData := genFullData(param.ObjType, param.Data)
-	fmt.Println(fullData)
 	sha1 := sha1Hash(fullData)
 
 	var objFile string
@@ -83,14 +82,23 @@ func FindObject(sha1Prefix string) (string, error) {
 
 // Read object with given SHA-1 prefix
 func ReadObject(sha1Prefix string) (ObjType, []byte, error) {
+	// 1.find object
 	path, err := FindObject(sha1Prefix)
 	if err != nil {
 		return "", nil, err
 	}
+
+	// 2.open object
 	compressed, err := os.ReadFile(path)
 	if err != nil {
 		return "", nil, fmt.Errorf("read file: %w", err)
 	}
+
+	// 3.parse object
+	return parseObject(compressed)
+}
+
+func parseObject(compressed []byte) (ObjType, []byte, error) {
 	fullData, err := zlibDecompress(compressed)
 	if err != nil {
 		return "", nil, err

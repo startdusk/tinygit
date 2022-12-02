@@ -15,11 +15,7 @@ func TestHashObject(t *testing.T) {
 		ObjType:   Blob,
 		WriteFile: true,
 	})
-	if objPath != "" {
-		defer func() {
-			os.RemoveAll(RepoRootPath)
-		}()
-	}
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,4 +89,11 @@ func FuzzZlibFunction(f *testing.F) {
 			t.Fatalf("content=%s, decompress=%s", content, decompress)
 		}
 	})
+}
+
+func TestMain(m *testing.M) {
+	defer func() {
+		os.RemoveAll(RepoRootPath)
+	}()
+	m.Run()
 }
