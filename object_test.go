@@ -30,7 +30,8 @@ func TestHashObject(t *testing.T) {
 
 	objPathList := strings.Split(objPath, "/")
 	if len(objPathList) != 4 {
-		t.Fatalf("expected path split 4 pair, but got %d, source path %s", len(objPathList), objPath)
+		t.Fatalf("expected path split 4 pair, but got %d, source path %s",
+			len(objPathList), objPath)
 	}
 	if objPathList[0] != RepoRootPath {
 		t.Fatalf("expected root path %s, but got %s", RepoRootPath, objPathList[0])
@@ -54,6 +55,60 @@ func TestHashObject(t *testing.T) {
 	expectDecompressed := []byte{98, 108, 111, 98, 32, 49, 49, 0, 72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100}
 	if !reflect.DeepEqual(expectDecompressed, decompressed) {
 		t.Fatalf("expected decompressed %v, but got %v", expectDecompressed, decompressed)
+	}
+}
+
+func TestObjectLifecycle(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		param HashParam
+	}{
+		{
+			name: "hash_object_should_success",
+			param: HashParam{
+				ObjType:   Blob,
+				Data:      []byte("hello world"),
+				WriteFile: true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// hash object
+			sha1, objFile, err := HashObject(tt.param)
+			if err != nil {
+				t.Fatalf("hash object: %+v", err)
+			}
+
+			// find object
+			gotObjFile, err := FindObject(sha1)
+			if err != nil {
+				t.Fatalf("find object: %+v", err)
+			}
+
+			if gotObjFile != objFile {
+				t.Fatalf("cannot find the object file [%s], but got [%s]", objFile, gotObjFile)
+			}
+
+			// read object
+			obj, err := ReadObject(sha1)
+			if err != nil {
+				t.Fatalf("read object: %+v", err)
+			}
+			if obj.Size != len(tt.param.Data) {
+				t.Fatalf("expect data size %d, but got %d", len(tt.param.Data), obj.Size)
+			}
+
+			if obj.Type != tt.param.ObjType {
+				t.Fatalf("expect data type %s, but got %s", tt.param.ObjType, obj.Type)
+			}
+
+			if !reflect.DeepEqual(obj.Data, tt.param.Data) {
+				t.Fatalf("expect data %v, but got %v", tt.param.Data, obj.Data)
+			}
+		})
 	}
 }
 

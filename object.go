@@ -142,11 +142,11 @@ func parseObject(compressed []byte) (Object, error) {
 	if err != nil {
 		return Object{}, fmt.Errorf("size should be a number, but got %s: %w", headerSplit[1], err)
 	}
-	data := fullData[nullIndex:]
+	data := fullData[nullIndex+1:]
 	if len(data) != size {
 		return Object{}, fmt.Errorf("expected size %d, got %d bytes", size, len(data))
 	}
-	return Object{Type: objType, Data: data}, nil
+	return NewObject(objType, data), nil
 }
 
 func sha1Hash(data []byte) string {
