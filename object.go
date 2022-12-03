@@ -20,6 +20,36 @@ const (
 
 type ObjType = string
 
+// Object represents a tinygit object.
+type Object struct {
+	Type ObjType
+	Size int
+	Data []byte
+}
+
+// NewObject creates a tinygit object.
+func NewObject(typ ObjType, data []byte) Object {
+	return Object{
+		Type: typ,
+		Size: len(data),
+		Data: data,
+	}
+}
+
+// FormatData structs data
+func (o Object) FormatData() []byte {
+	header := []byte(fmt.Sprintf("%s %d", o.Type, o.Size))
+	var fullData []byte
+	fullData = append(fullData, header...)
+	fullData = append(fullData, '\x00')
+	fullData = append(fullData, o.Data...)
+	return fullData
+}
+
+func (o Object) String() string {
+	return string(o.FormatData())
+}
+
 // There are three types of objects in the Git model: blobs (ordinary files),
 // commits, and trees (these represent the state of a single directory).
 const (
@@ -37,7 +67,7 @@ type HashParam struct {
 // HashObject compute hash of object data of given type and write to object store if
 // "WriteFile" is True. Return SHA-1 object hash as hex string.
 func HashObject(param HashParam) (string, string, error) {
-	fullData := genFullData(param.ObjType, param.Data)
+	fullData := NewObject(param.ObjType, param.Data).FormatData()
 	sha1 := sha1Hash(fullData)
 
 	var objFile string
@@ -81,44 +111,44 @@ func FindObject(sha1Prefix string) (string, error) {
 }
 
 // Read object with given SHA-1 prefix
-func ReadObject(sha1Prefix string) (ObjType, []byte, error) {
+func ReadObject(sha1Prefix string) (Object, error) {
 	// 1.find object
 	path, err := FindObject(sha1Prefix)
 	if err != nil {
-		return "", nil, err
+		return Object{}, err
 	}
 
 	// 2.open object
 	compressed, err := os.ReadFile(path)
 	if err != nil {
-		return "", nil, fmt.Errorf("read file: %w", err)
+		return Object{}, fmt.Errorf("read file: %w", err)
 	}
 
 	// 3.parse object
 	return parseObject(compressed)
 }
 
-func parseObject(compressed []byte) (ObjType, []byte, error) {
+func parseObject(compressed []byte) (Object, error) {
 	fullData, err := zlibDecompress(compressed)
 	if err != nil {
-		return "", nil, err
+		return Object{}, err
 	}
 	nullIndex := bytes.Index(fullData, []byte("\x00"))
 	header := fullData[:nullIndex]
 	headerSplit := strings.Split(string(header), " ")
 	if len(headerSplit) != 2 {
-		return "", nil, fmt.Errorf("object header should have 2 pair but got %d", len(headerSplit))
+		return Object{}, fmt.Errorf("object header should have 2 pair but got %d", len(headerSplit))
 	}
 	objType := ObjType(headerSplit[0])
 	size, err := strconv.Atoi(headerSplit[1])
 	if err != nil {
-		return "", nil, fmt.Errorf("size should be a number, but got %s: %w", headerSplit[1], err)
+		return Object{}, fmt.Errorf("size should be a number, but got %s: %w", headerSplit[1], err)
 	}
 	data := fullData[nullIndex:]
 	if len(data) != size {
-		return "", nil, fmt.Errorf("expected size %d, got %d bytes", size, len(data))
+		return Object{}, fmt.Errorf("expected size %d, got %d bytes", size, len(data))
 	}
-	return objType, data, nil
+	return Object{Type: objType, Data: data}, nil
 }
 
 func sha1Hash(data []byte) string {
@@ -149,15 +179,6 @@ func zlibDecompress(compressed []byte) ([]byte, error) {
 	io.Copy(&buf, r)
 
 	return buf.Bytes(), nil
-}
-
-func genFullData(typ ObjType, data []byte) []byte {
-	header := []byte(fmt.Sprintf("%s %d", typ, len(data)))
-	var fullData []byte
-	fullData = append(fullData, header...)
-	fullData = append(fullData, '\x00')
-	fullData = append(fullData, data...)
-	return fullData
 }
 
 func genObjectFile(path, filename string) string {
