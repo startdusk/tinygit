@@ -2,11 +2,9 @@ package tinygit
 
 import (
 	"bytes"
-	"compress/zlib"
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -153,32 +151,6 @@ func parseObject(compressed []byte) (Object, error) {
 
 func sha1Hash(data []byte) string {
 	return fmt.Sprintf("%x", sha1.Sum(data))
-}
-
-func zlibCompress(data []byte) ([]byte, error) {
-	var b bytes.Buffer
-	w := zlib.NewWriter(&b)
-	defer w.Close()
-	_, err := w.Write(data)
-	if err != nil {
-		return nil, err
-	}
-	w.Flush()
-	return b.Bytes(), nil
-}
-
-func zlibDecompress(compressed []byte) ([]byte, error) {
-	b := bytes.NewReader(compressed)
-	r, err := zlib.NewReader(b)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	return buf.Bytes(), nil
 }
 
 func genObjectFile(path, filename string) string {
