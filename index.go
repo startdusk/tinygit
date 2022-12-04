@@ -31,6 +31,24 @@ type Index struct {
 	Path   string
 }
 
+func (i Index) Head() ([]byte, error) {
+	values := []any{
+		i.CTimeS,
+		i.CTimeN,
+		i.MTimeS,
+		i.MTimeN,
+		i.Dev,
+		i.INO,
+		i.Mode,
+		i.UID,
+		i.GID,
+		i.Size,
+		i.Sha1,
+		i.Flags,
+	}
+	return binarypack.Pack(headFormat, values, binary.BigEndian)
+}
+
 // Indexes represens a index slice for sort.
 type Indexes []Index
 
@@ -148,29 +166,14 @@ func WriteIndex(indexes []Index) error {
 }
 
 func makePacked(index Index) ([]byte, error) {
-	values := []any{
-		index.CTimeS,
-		index.CTimeN,
-		index.MTimeS,
-		index.MTimeN,
-		index.Dev,
-		index.INO,
-		index.Mode,
-		index.UID,
-		index.GID,
-		index.Size,
-		index.Sha1,
-		index.Flags,
-	}
-	head, err := binarypack.Pack(headFormat, values, binary.BigEndian)
+	head, err := index.Head()
 	if err != nil {
 		return nil, err
 	}
-
 	path := []byte(index.Path)
 	length := ((62 + len(path) + 8) / 8) * 8
 	var packed []byte
-	packed = append(packed, []byte(head)...)
+	packed = append(packed, head...)
 	packed = append(packed, path...)
 	padding := bytes.Repeat([]byte("\x00"), (length - 68 - len(path)))
 	packed = append(packed, padding...)
