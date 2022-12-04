@@ -60,53 +60,72 @@ func TestHashObject(t *testing.T) {
 
 func TestObjectLifecycle(t *testing.T) {
 
-	tests := []struct {
-		name  string
-		param HashParam
+	cases := []struct {
+		name      string
+		param     HashParam
+		writeFile bool
 	}{
 		{
-			name: "hash_object_should_success",
+			name: "hash_object_write_file",
 			param: HashParam{
 				ObjType:   Blob,
 				Data:      []byte("hello world"),
 				WriteFile: true,
 			},
+			writeFile: true,
 		},
+		{
+			name: "hash_object_no_write_file",
+			param: HashParam{
+				ObjType:   Blob,
+				Data:      []byte("hello world111"),
+				WriteFile: false,
+			},
+			writeFile: false,
+		},
+
+		// TODO: need more test cases
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			// hash object
-			sha1, objFile, err := HashObject(tt.param)
+			sha1, objFile, err := HashObject(c.param)
 			if err != nil {
 				t.Fatalf("hash object: %+v", err)
 			}
 
-			// find object
-			gotObjFile, err := FindObject(sha1)
-			if err != nil {
-				t.Fatalf("find object: %+v", err)
-			}
+			if c.writeFile {
+				// find object
+				gotObjFile, err := FindObject(sha1)
+				if err != nil {
+					t.Fatalf("find object: %+v", err)
+				}
 
-			if gotObjFile != objFile {
-				t.Fatalf("cannot find the object file [%s], but got [%s]", objFile, gotObjFile)
-			}
+				if gotObjFile != objFile {
+					t.Fatalf("cannot find the object file [%s], but got [%s]", objFile, gotObjFile)
+				}
 
-			// read object
-			obj, err := ReadObject(sha1)
-			if err != nil {
-				t.Fatalf("read object: %+v", err)
-			}
-			if obj.Size != len(tt.param.Data) {
-				t.Fatalf("expect data size %d, but got %d", len(tt.param.Data), obj.Size)
-			}
+				// read object
+				obj, err := ReadObject(sha1)
+				if err != nil {
+					t.Fatalf("read object: %+v", err)
+				}
+				if obj.Size != len(c.param.Data) {
+					t.Fatalf("expected data size %d, but got %d", len(c.param.Data), obj.Size)
+				}
 
-			if obj.Type != tt.param.ObjType {
-				t.Fatalf("expect data type %s, but got %s", tt.param.ObjType, obj.Type)
-			}
+				if obj.Type != c.param.ObjType {
+					t.Fatalf("expected data type %s, but got %s", c.param.ObjType, obj.Type)
+				}
 
-			if !reflect.DeepEqual(obj.Data, tt.param.Data) {
-				t.Fatalf("expect data %v, but got %v", tt.param.Data, obj.Data)
+				if !reflect.DeepEqual(obj.Data, c.param.Data) {
+					t.Fatalf("expected data %v, but got %v", c.param.Data, obj.Data)
+				}
+			} else {
+				if objFile != "" {
+					t.Fatalf("expected no write file, but got %s", objFile)
+				}
 			}
 		})
 	}

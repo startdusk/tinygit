@@ -2,7 +2,6 @@ package tinygit
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"os"
@@ -131,7 +130,7 @@ func parseObject(compressed []byte) (Object, error) {
 	if err != nil {
 		return Object{}, err
 	}
-	nullIndex := bytes.Index(fullData, []byte("\x00"))
+	nullIndex := bytes.IndexByte(fullData, byte('\x00'))
 	header := fullData[:nullIndex]
 	headerSplit := strings.Split(string(header), " ")
 	if len(headerSplit) != 2 {
@@ -147,10 +146,6 @@ func parseObject(compressed []byte) (Object, error) {
 		return Object{}, fmt.Errorf("expected size %d, got %d bytes", size, len(data))
 	}
 	return NewObject(objType, data), nil
-}
-
-func sha1Hash(data []byte) string {
-	return fmt.Sprintf("%x", sha1.Sum(data))
 }
 
 func genObjectFile(path, filename string) string {
