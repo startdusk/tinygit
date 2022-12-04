@@ -14,7 +14,7 @@ import (
 	"github.com/startdusk/tinygit/shared/binarypack"
 )
 
-// Index represens a index struct.
+// Index represents a index struct.
 type Index struct {
 	CTimeS int64
 	CTimeN int64
@@ -49,7 +49,7 @@ func (i Index) Head() ([]byte, error) {
 	return binarypack.Pack(headFormat, values, binary.BigEndian)
 }
 
-// Indexes represens a index slice for sort.
+// Indexes represents a index slice for sort.
 type Indexes []Index
 
 func (idxs Indexes) Len() int           { return len(idxs) }
