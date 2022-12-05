@@ -9,7 +9,7 @@ import (
 	"github.com/startdusk/tinygit/shared/filestat"
 )
 
-// Create directory for repo and initialize .tinygit directory.
+// Initail create directory for repo and initialize .tinygit directory.
 func Initail(repo string) error {
 	if err := os.MkdirAll(repo, os.ModePerm); err != nil {
 		return err
@@ -29,6 +29,7 @@ func Initail(repo string) error {
 	return nil
 }
 
+// PrintHelp print the help message.
 func PrintHelp() {
 	const help = `useage: tinygit [-v | --version] [-h | --help]
 	        <command> [<args>]
@@ -45,6 +46,7 @@ work on the current change (see also: tinygit help everyday)
 	fmt.Println(help)
 }
 
+// Add add file contents to the index.
 func Add(path string) error {
 	// 1.read files recursively
 	var paths []string
@@ -82,9 +84,9 @@ func Add(path string) error {
 			return err
 		}
 		index := Index{
-			CTimeS: st.CTimeS,
+			CTimeS: st.CreateTime,
 			CTimeN: 0,
-			MTimeS: st.MTimeS,
+			MTimeS: st.ModifyTime,
 			MTimeN: 0,
 			Dev:    st.Dev,
 			INO:    st.INO,

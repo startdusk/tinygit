@@ -2,6 +2,7 @@ package tinygit
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -28,6 +29,7 @@ func TestHashObject(t *testing.T) {
 		t.Fatal("obj path empty")
 	}
 
+	objPath = filepath.ToSlash(objPath)
 	objPathList := strings.Split(objPath, "/")
 	if len(objPathList) != 4 {
 		t.Fatalf("expected path split 4 pair, but got %d, source path %s",

@@ -1,3 +1,5 @@
+//go:build darwin
+
 package filestat
 
 import (
@@ -6,7 +8,7 @@ import (
 
 func TestFileStat(t *testing.T) {
 	// TODO: Strengthen this test case.
-	st, err := Stat("./filestat_unix_test.go")
+	st, err := Stat("./filestat_darwin_test.go")
 	if err != nil {
 		t.Fatal(err)
 	}

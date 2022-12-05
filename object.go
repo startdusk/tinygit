@@ -11,10 +11,13 @@ import (
 )
 
 const (
-	RepoRootPath  = ".tinygit"
+	// RepoRootPath root repo folder.
+	RepoRootPath = ".tinygit"
+	// ObjectsFolder objects folder.
 	ObjectsFolder = "objects"
 )
 
+// ObjType obejct type alias.
 type ObjType = string
 
 // Object represents a tinygit object.
@@ -33,7 +36,7 @@ func NewObject(typ ObjType, data []byte) Object {
 	}
 }
 
-// FormatData structs data
+// FormatData structs data.
 func (o Object) FormatData() []byte {
 	header := []byte(fmt.Sprintf("%s %d", o.Type, o.Size))
 	var fullData []byte
@@ -55,6 +58,7 @@ const (
 	Tree   ObjType = "tree"
 )
 
+// HashParam hash object params.
 type HashParam struct {
 	Data      []byte
 	ObjType   ObjType
@@ -107,7 +111,7 @@ func FindObject(sha1Prefix string) (string, error) {
 	return objFile, nil
 }
 
-// Read object with given SHA-1 prefix
+// ReadObject read object with given SHA-1 prefix.
 func ReadObject(sha1Prefix string) (Object, error) {
 	// 1.find object
 	path, err := FindObject(sha1Prefix)

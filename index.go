@@ -31,6 +31,7 @@ type Index struct {
 	Path   string
 }
 
+// Head pack the head message.
 func (i Index) Head() ([]byte, error) {
 	values := []any{
 		i.CTimeS,
@@ -56,6 +57,7 @@ func (idxs Indexes) Len() int           { return len(idxs) }
 func (idxs Indexes) Swap(i, j int)      { idxs[i], idxs[j] = idxs[j], idxs[i] }
 func (idxs Indexes) Less(i, j int) bool { return idxs[i].Path < idxs[j].Path }
 
+// Sort sort the index.
 func (idxs Indexes) Sort() []Index {
 	sort.Sort(idxs)
 	return idxs
@@ -69,7 +71,7 @@ var indexFile = filepath.Join(RepoRootPath, "index")
 var headFormat = []string{"L", "L", "L", "L", "L", "L", "L", "L", "20s", "H"}
 var headerFormat = []string{"4s", "L", "L"}
 
-// Read tinygit index file and return list of Index objects.
+// ReadIndex read tinygit index file and return list of Index objects.
 func ReadIndex() (Indexes, error) {
 	indexes := make([]Index, 0)
 	data, err := os.ReadFile(indexFile)
@@ -141,7 +143,7 @@ func ReadIndex() (Indexes, error) {
 	return indexes, nil
 }
 
-// Write list of Index objects to tinygit index file.
+// WriteIndex write list of Index objects to tinygit index file.
 func WriteIndex(indexes []Index) error {
 	var packeds [][]byte
 	for _, index := range indexes {

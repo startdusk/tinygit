@@ -1,4 +1,4 @@
-//go:build unix
+//go:build darwin
 
 package filestat
 
@@ -11,17 +11,18 @@ import (
 
 // FileStat indicates the file status of the specified system.
 type FileStat struct {
-	CTimeS int64
-	MTimeS int64
-	Dev    int32
-	INO    uint64
-	Mode   uint16
-	UID    uint32
-	GID    uint32
-	Size   int64
-	Flags  uint32
+	CreateTime int64
+	ModifyTime int64
+	Dev        int32
+	INO        uint64
+	Mode       uint16
+	UID        uint32
+	GID        uint32
+	Size       int64
+	Flags      uint32
 }
 
+// Stat query file state information.
 func Stat(path string) (FileStat, error) {
 	filestat := FileStat{}
 	fileinfo, err := os.Stat(path)
@@ -39,7 +40,7 @@ func Stat(path string) (FileStat, error) {
 	filestat.GID = stat.Gid
 	filestat.Size = stat.Size
 	filestat.Flags = stat.Flags
-	filestat.CTimeS = int64(time.Since(time.Unix(stat.Ctimespec.Sec, stat.Ctimespec.Nsec)))
-	filestat.MTimeS = int64(time.Since(time.Unix(stat.Mtimespec.Sec, stat.Mtimespec.Nsec)))
+	filestat.CreateTime = time.Unix(stat.Ctimespec.Sec, stat.Ctimespec.Nsec).Unix()
+	filestat.ModifyTime = time.Unix(stat.Mtimespec.Sec, stat.Mtimespec.Nsec).Unix()
 	return filestat, nil
 }
