@@ -63,12 +63,19 @@ func (idxs Indexes) Sort() []Index {
 	return idxs
 }
 
-const indexSignature = "DIRC"
+const (
+	indexSignature = "DIRC"
+	indexVersion   = int32(1)
 
-const indexVersion = 1
+	headSize     = 108
+	headerSize   = 12
+	checkSumSize = 40
+)
 
 var indexFile = filepath.Join(RepoRootPath, "index")
-var headFormat = []string{"L", "L", "L", "L", "L", "L", "L", "L", "20s", "H"}
+
+var headFormat = []string{"Q", "Q", "Q", "Q", "Q", "Q", "Q", "Q", "Q", "Q", "20s", "Q"}
+
 var headerFormat = []string{"4s", "L", "L"}
 
 // ReadIndex read tinygit index file and return list of Index objects.
@@ -84,11 +91,12 @@ func ReadIndex() (Indexes, error) {
 		}
 	}
 
-	digest := sha1Hash(data[:len(data)-20])
-	if !reflect.DeepEqual(digest, data[len(data)-20:]) {
+	digest := sha1Hash(data[:len(data)-checkSumSize])
+	if !reflect.DeepEqual([]byte(digest), data[len(data)-checkSumSize:]) {
 		return nil, errors.New("invalid index checksum")
 	}
-	header, err := binarypack.UnPack([]string{"4s", "L", "L"}, data[:12], binary.BigEndian)
+
+	header, err := binarypack.UnPack(headerFormat, data[:headerSize], binary.LittleEndian)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +117,7 @@ func ReadIndex() (Indexes, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid version type")
 	}
-	if version != indexVersion {
+	if int32(version) != indexVersion {
 		return nil, fmt.Errorf("unknown index version %d", version)
 	}
 
@@ -118,26 +126,27 @@ func ReadIndex() (Indexes, error) {
 		return nil, fmt.Errorf("invalid index object lenght type")
 	}
 
-	indexesBytes := data[12 : len(data)-20]
+	indexesBytes := data[headerSize : len(data)-checkSumSize]
 
 	var i int
-	for i+62 < len(indexesBytes) {
-		fieldsEnd := i + 62
-		fields, err := binarypack.UnPack(headFormat, indexesBytes[i:fieldsEnd], binary.BigEndian)
+	for i+headSize < len(indexesBytes) {
+		fieldsEnd := i + headSize
+		fields, err := binarypack.UnPack(headFormat, indexesBytes[i:fieldsEnd], binary.LittleEndian)
 		if err != nil {
 			return nil, err
 		}
-		pathEnd := bytes.IndexByte(data[fieldsEnd:], '\x00')
-		path := data[fieldsEnd:pathEnd]
+		pathEnd := bytes.IndexByte(indexesBytes[fieldsEnd:], '\x00')
+		path := indexesBytes[fieldsEnd : fieldsEnd+pathEnd]
 		index, err := parseFieldsToIndex(fields)
 		if err != nil {
 			return nil, err
 		}
+		index.Path = string(path)
 		indexes = append(indexes, index)
-		indexLen := ((62 + len(path) + 8) / 8) * 8
+		indexLen := ((headSize + len(path) + 8) / 8) * 8
 		i += indexLen
 	}
-	if len(indexes) != indexNum {
+	if len(indexes) != int(indexNum) {
 		return nil, fmt.Errorf("invalid index num")
 	}
 	return indexes, nil
@@ -153,12 +162,13 @@ func WriteIndex(indexes []Index) error {
 		}
 		packeds = append(packeds, packed)
 	}
-	header, err := binarypack.Pack(headerFormat, []any{indexSignature, indexVersion, len(indexes)}, binary.BigEndian)
+	header, err := binarypack.Pack(headerFormat, []any{indexSignature, indexVersion,
+		int32(len(indexes))}, binary.BigEndian)
 	if err != nil {
 		return err
 	}
-	var allData []byte
-	allData = append(allData, []byte(header)...)
+
+	allData := []byte(header)
 	for _, packed := range packeds {
 		allData = append(allData, packed...)
 	}
@@ -173,16 +183,22 @@ func makePacked(index Index) ([]byte, error) {
 		return nil, err
 	}
 	path := []byte(index.Path)
-	length := ((62 + len(path) + 8) / 8) * 8
+	length := ((headSize + len(path) + 8) / 8) * 8
 	var packed []byte
 	packed = append(packed, head...)
 	packed = append(packed, path...)
-	padding := bytes.Repeat([]byte("\x00"), (length - 68 - len(path)))
+	repeat := (length - headSize - len(path))
+	var padding []byte
+	if repeat > 0 {
+		padding = bytes.Repeat([]byte("\x00"), repeat)
+	}
+
 	packed = append(packed, padding...)
 	return packed, nil
 }
 
 func parseFieldsToIndex(data []any) (Index, error) {
+	fmt.Printf("%v", data)
 	index := Index{}
 	if len(data) != 12 {
 		return index, fmt.Errorf("invalid index params")

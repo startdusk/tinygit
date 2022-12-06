@@ -132,10 +132,3 @@ func TestObjectLifecycle(t *testing.T) {
 		})
 	}
 }
-
-func TestMain(m *testing.M) {
-	defer func() {
-		os.RemoveAll(RepoRootPath)
-	}()
-	m.Run()
-}

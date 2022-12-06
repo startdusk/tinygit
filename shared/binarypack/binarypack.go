@@ -48,38 +48,65 @@ func Pack(format []string, msg []any, order binary.ByteOrder) ([]byte, error) {
 			}
 			res = append(res, intToBytes(castedValue, 2)...)
 		case "i", "I", "l", "L":
-			castedValue, ok := msg[i].(int)
-			if !ok {
-				return nil, errors.New("Type of passed value doesn't match to expected '" + f + "' (int, 4 bytes)")
+			switch msg[i].(type) {
+			case int:
+				res = append(res, intToBytes(msg[i].(int), 4)...)
+			case int16:
+				res = append(res, intToBytes(msg[i].(int16), 4)...)
+			case int32:
+				res = append(res, intToBytes(msg[i].(int32), 4)...)
+			case uint16:
+				res = append(res, intToBytes(msg[i].(uint16), 4)...)
+			case uint32:
+				res = append(res, intToBytes(msg[i].(uint32), 4)...)
+			default:
+				return nil, fmt.Errorf("Type of passed value %v doesn't match to expected '"+f+"' (int, 4 bytes)", msg[i])
 			}
-			res = append(res, intToBytes(castedValue, 4)...)
 		case "q", "Q":
-			castedValue, ok := msg[i].(int)
-			if !ok {
-				return nil, errors.New("Type of passed value doesn't match to expected '" + f + "' (int, 8 bytes)")
+			switch msg[i].(type) {
+			case int:
+				res = append(res, intToBytes(msg[i].(int), 8)...)
+			case int16:
+				res = append(res, intToBytes(msg[i].(int16), 8)...)
+			case int32:
+				res = append(res, intToBytes(msg[i].(int32), 8)...)
+			case int64:
+				res = append(res, intToBytes(msg[i].(int64), 8)...)
+			case uint16:
+				res = append(res, intToBytes(msg[i].(uint16), 8)...)
+			case uint32:
+				res = append(res, intToBytes(msg[i].(uint32), 8)...)
+			case uint64:
+				res = append(res, intToBytes(msg[i].(uint64), 8)...)
+			default:
+				return nil, fmt.Errorf("Type of passed value %v doesn't match to expected '"+f+"' (int, 8 bytes)", msg[i])
 			}
-			res = append(res, intToBytes(castedValue, 8)...)
 		case "f":
 			castedValue, ok := msg[i].(float32)
 			if !ok {
-				return nil, errors.New("Type of passed value doesn't match to expected '" + f + "' (float32)")
+				return nil, fmt.Errorf("Type of passed value %v doesn't match to expected '"+f+"' (float32)", msg[i])
 			}
 			res = append(res, float32ToBytes(castedValue, 4, order)...)
 		case "d":
 			castedValue, ok := msg[i].(float64)
 			if !ok {
-				return nil, errors.New("Type of passed value doesn't match to expected '" + f + "' (float64)")
+				return nil, fmt.Errorf("Type of passed value %v doesn't match to expected '"+f+"' (float64)", msg[i])
 			}
 			res = append(res, float64ToBytes(castedValue, 8, order)...)
 		default:
 			if strings.Contains(f, "s") {
 				castedValue, ok := msg[i].(string)
 				if !ok {
-					return nil, errors.New("Type of passed value doesn't match to expected '" + f + "' (string)")
+					return nil, fmt.Errorf("Type of passed value %v doesn't match to expected '"+f+"' (string)", msg[i])
 				}
 				n, _ := strconv.Atoi(strings.TrimRight(f, "s"))
+				var padding []byte
+				repeat := n - len(castedValue)
+				if repeat > 0 {
+					padding = bytes.Repeat([]byte("\x00"), repeat)
+				}
 				res = append(res, []byte(fmt.Sprintf("%s%s",
-					castedValue, strings.Repeat("\x00", n-len(castedValue))))...)
+					castedValue, padding))...)
 			} else {
 				return nil, errors.New("Unexpected format token: '" + f + "'")
 			}
@@ -178,7 +205,11 @@ func bytesToBool(b []byte, order binary.ByteOrder) bool {
 	return bytesToInt(b, order) > 0
 }
 
-func intToBytes(n int, size int) []byte {
+type Integer interface {
+	int | int16 | int32 | int64 | uint16 | uint32 | uint64
+}
+
+func intToBytes[T Integer](n T, size int) []byte {
 	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.LittleEndian, int64(n))
 	return buf.Bytes()[0:size]

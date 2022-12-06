@@ -30,6 +30,7 @@ fuzz: clean
 	@go test -fuzz=FuzzZlibFunction -fuzztime 30s
 
 .PHONY: clean
+clean:
 	@go mod tidy
 	@go fmt ./...
 	@go vet ./...
